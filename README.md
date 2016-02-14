@@ -1,0 +1,91 @@
+# MongoDB Kohana module
+
+This module is used to perform operations on the database Mongo.
+CRUD operations are performed using the query builder
+
+## Requirements
+
+You must install mongo.so extension for PHP on linux, or mongo dll extension for
+Windows
+
+## Example usage:
+
+### Select queries
+
+```php
+        $result = Mongo_DB::select(array('title', 'caption'))
+                ->from('mycol')
+                ->where(array('likes' => 100))
+                ->execute()
+                ->as_array();
+
+```
+
+```php
+        $result = Mongo_DB::select()
+                ->from('mycol')
+                ->execute()
+                ->current();
+
+```
+
+### Insert queries
+
+```php
+        $document = array(
+            "title" => "Foo boo",
+            "description" => "test description",
+            "likes" => 10,
+            "url" => "www.xxxx.com",
+            "by", "Author"
+        );
+
+        Mongo_DB::insert('mycol', $document)
+                ->execute();
+
+```
+
+### Update queries
+
+```php
+        $data = array(
+            "title" => "FOO BOO"
+        );
+
+        Mongo_DB::update('mycol', $data)
+                ->where("title", "Foo boo")
+                ->multiple()
+                ->execute();
+
+```
+
+### Delete queries
+
+```php
+        Mongo_DB::delete('mycol')
+                ->where("likes", 100)
+                ->just_one()
+                ->execute();
+
+```
+
+## Config
+
+mongo.php
+
+```php
+<?php defined('SYSPATH') OR die('No direct access allowed.');
+
+return array
+(
+	'default' => array
+	(
+	    'host'   => 'localhost',
+            'port'   => 27017,
+	    'database'   => 'kohana',
+            'default_collection' => 'kohana_collection'
+	),
+);
+
+```
+
