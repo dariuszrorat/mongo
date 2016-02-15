@@ -17,10 +17,18 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
     protected $_options = array('multiple' => FALSE);
     protected $_multiple = FALSE;
 
-    public function __construct($collection, $data)
+    public function __construct($database, $collection, $data)
     {
         $this->_config();
 
+        if ($database === NULL)
+        {
+            $this->_database = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_database'];
+        } else
+        {
+            $this->_database = $database;
+        }
+        
         if ($collection === NULL)
         {
             $this->_collection = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_collection'];
@@ -56,10 +64,20 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
 
     public function execute()
     {
+        if (Kohana::$profiling)
+        {
+            $benchmark = Profiler::start("Mongo (UPDATE)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
+        }        
 
         $this->_selected_collection->update(
                 $this->_where, array('$set' => $this->_data), $this->_options
         );
+        
+        if (isset($benchmark))
+        {
+            Profiler::stop($benchmark);
+        }
+        
     }
 
 }

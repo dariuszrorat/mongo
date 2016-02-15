@@ -15,10 +15,18 @@ class Kohana_Database_Mongo_Builder_Insert extends Database_Mongo_Builder
     protected $_data = NULL;
     protected $_options = array();            
 
-    public function __construct($collection, array $data)
+    public function __construct($database, $collection, array $data)
     {
         $this->_config();
 
+        if ($database === NULL)
+        {
+            $this->_database = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_database'];
+        } else
+        {
+            $this->_database = $database;
+        }
+        
         if ($collection === NULL)
         {
             $this->_collection = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_collection'];
@@ -42,9 +50,20 @@ class Kohana_Database_Mongo_Builder_Insert extends Database_Mongo_Builder
 
     public function execute()
     {
+        if (Kohana::$profiling)
+        {
+            $benchmark = Profiler::start("Mongo (INSERT)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
+        }
+        
         $this->_selected_collection->insert($this->_data, $this->_options);
-    }
 
+        if (isset($benchmark))
+        {
+            Profiler::stop($benchmark);
+        }
+        
+    }
+    
 }
 
 // End Database_Mongo_Builder_Insert

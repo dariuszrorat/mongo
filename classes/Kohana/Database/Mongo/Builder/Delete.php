@@ -16,7 +16,7 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
     protected $_where = NULL;
     protected $_options = array('justOne' => FALSE);
 
-    public function __construct($collection = NULL)
+    public function __construct($database, $collection)
     {
         $this->_config();
 
@@ -54,7 +54,18 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
 
     public function execute()
     {
+        if (Kohana::$profiling)
+        {
+            $benchmark = Profiler::start("Mongo (DELETE)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
+        }        
+        
         $this->_selected_collection->remove($this->_where, $this->_options);
+        
+        if (isset($benchmark))
+        {
+            Profiler::stop($benchmark);
+        }
+        
     }
 
 }

@@ -14,7 +14,7 @@ Windows
 
 ```php
         $result = Mongo_DB::select(array('title', 'caption'))
-                ->from('mycol')
+                ->from('mydb', 'mycol')
                 ->where(array('likes' => 100))
                 ->execute()
                 ->as_array();
@@ -23,7 +23,7 @@ Windows
 
 ```php
         $result = Mongo_DB::select()
-                ->from('mycol')
+                ->from('mydb', 'mycol')
                 ->execute()
                 ->current();
 
@@ -40,7 +40,7 @@ Windows
             "by", "Author"
         );
 
-        Mongo_DB::insert('mycol', $document)
+        Mongo_DB::insert('mydb', 'mycol', $document)
                 ->execute();
 
 ```
@@ -52,7 +52,7 @@ Windows
             "title" => "FOO BOO"
         );
 
-        Mongo_DB::update('mycol', $data)
+        Mongo_DB::update('mydb', 'mycol', $data)
                 ->where("title", "Foo boo")
                 ->multiple()
                 ->execute();
@@ -62,7 +62,7 @@ Windows
 ### Delete queries
 
 ```php
-        Mongo_DB::delete('mycol')
+        Mongo_DB::delete('mydb', 'mycol')
                 ->where("likes", 100)
                 ->just_one()
                 ->execute();
@@ -74,17 +74,15 @@ Windows
 mongo.php
 
 ```php
-<?php defined('SYSPATH') OR die('No direct access allowed.');
-
 return array
-(
-	'default' => array
-	(
-	    'host'   => 'localhost',
-            'port'   => 27017,
-	    'database'   => 'kohana',
-            'default_collection' => 'kohana_collection'
-	),
+    (
+    'default' => array
+        (
+        'host' => 'localhost',
+        'port' => 27017,
+        'default_database' => 'kohana',
+        'default_collection' => 'kohana_collection'
+    ),
 );
 
 ```

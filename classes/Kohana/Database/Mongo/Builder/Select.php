@@ -17,6 +17,8 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
     protected $_fields = array();
     protected $_options = array();
     protected $_from = NULL;
+    protected $_is_cached = false;
+    protected $_cache_life;
 
     /**
      * @return  void
@@ -32,8 +34,16 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @param   string
      * @return  $this
      */
-    public function from($collection = NULL)
+    public function from($database = NULL, $collection = NULL)
     {
+        if ($database === NULL)
+        {
+            $this->_database = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_database'];
+        } else
+        {
+            $this->_database = $database;
+        }
+
         if ($collection === NULL)
         {
             $this->_collection = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_collection'];
@@ -60,15 +70,31 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         }
         return $this;
     }
+    
+    public function cached($lifetime = NULL)
+    {
+        if ($lifetime === NULL)
+        {
+            $lifetime = Kohana::$cache_life;
+        }
+
+        $this->_is_cached = true;
+        $this->_cache_life = $lifetime;
+        return $this;
+    }
 
     /**
      *
      * @return  Mongo_Result
      */
     public function execute()
-    {
-        return new Database_Mongo_Result($this->_from, $this->_query, $this->_fields, $this->_options);
+    {        
+        $cache_life = $this->_is_cached ? $this->_cache_life : 0;        
+
+        return new Database_Mongo_Result($this->_from, $this->_query, 
+                $this->_fields, $this->_options, $cache_life);
     }
+        
 
 }
 

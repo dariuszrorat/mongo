@@ -30,9 +30,9 @@ class Kohana_Mongo_DB {
 	 * @param   array   $data  data to insert
 	 * @return  Mongo_Builder_Insert
 	 */
-	public static function insert($collection = NULL, array $data = NULL)
+	public static function insert($database = NULL, $collection = NULL, array $data = NULL)
 	{
-		return new Database_Mongo_Builder_Insert($collection, $data);
+		return new Database_Mongo_Builder_Insert($database, $collection, $data);
 	}
 
 	/**
@@ -41,9 +41,9 @@ class Kohana_Mongo_DB {
 	 * @param   string  $collection  collection to update
 	 * @return  Mongo_Builder_Update
 	 */
-	public static function update($collection = NULL, array $data = NULL)
+	public static function update($database = NULL, $collection = NULL, array $data = NULL)
 	{
-		return new Database_Mongo_Builder_Update($collection, $data);
+		return new Database_Mongo_Builder_Update($database, $collection, $data);
 	}
 
 	/**
@@ -52,9 +52,9 @@ class Kohana_Mongo_DB {
 	 * @param   string  $collection  collection to delete from
 	 * @return  Mongo_Builder_Delete
 	 */
-	public static function delete($collection = NULL)
+	public static function delete($database = NULL, $collection = NULL)
 	{
-		return new Database_Mongo_Builder_Delete($collection);
+		return new Database_Mongo_Builder_Delete($database, $collection);
 	}
 
 
