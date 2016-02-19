@@ -53,7 +53,7 @@ Windows
         );
 
         Mongo_DB::update('mydb', 'mycol', $data)
-                ->where("title", "Foo boo")
+                ->where(array("title" => "Foo boo"))
                 ->multiple()
                 ->execute();
 
@@ -63,7 +63,7 @@ Windows
 
 ```php
         Mongo_DB::delete('mydb', 'mycol')
-                ->where("likes", 100)
+                ->where(array("likes" => 100))
                 ->just_one()
                 ->execute();
 

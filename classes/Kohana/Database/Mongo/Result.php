@@ -15,15 +15,34 @@ class Kohana_Database_Mongo_Result
     protected $_query;
     protected $_fields;
     protected $_options = array();
-    protected $_cache_life;
+    protected $_cache_life = 0;
+    protected $_sort_fields = NULL;
+    protected $_limit = NULL;
 
-    public function __construct($collection, $query, $fields, $options = array(), $cache_life = 0)
+    public function __construct($collection, $query, $fields, $options = array())
     {
         $this->_collection = $collection;
         $this->_query = $query;
         $this->_fields = $fields;
-        $this->_options = $options;
-        $this->_cache_life = $cache_life;
+        $this->_options = $options;        
+    }
+    
+    public function cached($lifetime)
+    {
+        $this->_cache_life = $lifetime;
+        return $this;
+    }
+    
+    public function sort($fields)
+    {
+        $this->_sort_fields = $fields;
+        return $this;
+    }
+    
+    public function limit($limit)
+    {
+        $this->_limit = $limit;
+        return $this;
     }
 
     public function as_array()
@@ -42,12 +61,22 @@ class Kohana_Database_Mongo_Result
             }
 
             $cursor = $this->_collection->find($this->_query, $this->_fields);
-
+            
             if (isset($benchmark))
             {
                 Profiler::stop($benchmark);
             }
-
+            
+            if ($this->_sort_fields !== NULL)
+            {
+                $cursor->sort($this->_sort_fields);
+            }
+            
+            if ($this->_limit !== NULL)
+            {
+                $cursor->limit($this->_limit);
+            }
+            
             $result = array();
             foreach ($cursor as $document)
             {

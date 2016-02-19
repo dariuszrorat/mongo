@@ -17,8 +17,9 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
     protected $_fields = array();
     protected $_options = array();
     protected $_from = NULL;
-    protected $_is_cached = false;
-    protected $_cache_life;
+    protected $_cache_life = 0;
+    protected $_sort_fields = NULL;
+    protected $_limit = NULL;
 
     /**
      * @return  void
@@ -78,21 +79,36 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
             $lifetime = Kohana::$cache_life;
         }
 
-        $this->_is_cached = true;
         $this->_cache_life = $lifetime;
+        return $this;
+    }
+    
+    public function sort($fields = NULL)
+    {
+        $this->_sort_fields = $fields;
+        return $this;
+    }
+
+    public function limit($limit = NULL)
+    {
+        $this->_limit = $limit;
         return $this;
     }
 
     /**
-     *
-     * @return  Mongo_Result
+     * Execute query
+     * @return  Darabase_Mongo_Result
      */
     public function execute()
     {        
-        $cache_life = $this->_is_cached ? $this->_cache_life : 0;        
-
-        return new Database_Mongo_Result($this->_from, $this->_query, 
-                $this->_fields, $this->_options, $cache_life);
+        $result = new Database_Mongo_Result($this->_from, $this->_query, 
+                $this->_fields, $this->_options);
+        $result = $result
+                ->cached($this->_cache_life)
+                ->sort($this->_sort_fields)
+                ->limit($this->_limit);
+        return $result;
+                
     }
         
 

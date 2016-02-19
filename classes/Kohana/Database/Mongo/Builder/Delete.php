@@ -13,7 +13,7 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
 
     protected $_selected_collection = NULL;
     protected $_data = NULL;
-    protected $_where = NULL;
+    protected $_where = array();
     protected $_options = array('justOne' => FALSE);
 
     public function __construct($database, $collection)
@@ -46,9 +46,9 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
         return $this;
     }    
     
-    public function where($key, $value)
+    public function where($query)
     {
-        $this->_where = array($key => $value);
+        $this->_where = $query;
         return $this;
     }
 
