@@ -47,8 +47,12 @@ class Kohana_Database_Mongo_Result
 
     public function as_array()
     {
-        $cache_key = $this->_collection . 'ALL' . serialize($this->_query)
-                . serialize($this->_fields) . serialize($this->_options);
+        $cache_key = $this->_collection . 'ALL'
+                   . serialize($this->_query)
+                   . serialize($this->_fields)
+                   . serialize($this->_options)
+                   . serialize($this->_sort_fields)
+                   . serialize($this->_limit);
 
         $caching = $this->_cache_life > 0;
         $result = $caching ? Kohana::cache($cache_key) : NULL;
@@ -61,12 +65,7 @@ class Kohana_Database_Mongo_Result
             }
 
             $cursor = $this->_collection->find($this->_query, $this->_fields);
-            
-            if (isset($benchmark))
-            {
-                Profiler::stop($benchmark);
-            }
-            
+
             if ($this->_sort_fields !== NULL)
             {
                 $cursor->sort($this->_sort_fields);
@@ -83,12 +82,44 @@ class Kohana_Database_Mongo_Result
                 $result[] = $document;
             }
 
+            if (isset($benchmark))
+            {
+                Profiler::stop($benchmark);
+            }
+
             if ($caching)
             {                
                 Kohana::cache($cache_key, $result, $this->_cache_life);
             }
         }
         return $result;
+    }
+
+    public function cursor()
+    {
+        if (Kohana::$profiling)
+        {
+            $benchmark = Profiler::start("Mongo (CURSOR)", 'COLLECTION: ' . $this->_collection);
+        }
+
+        $cursor = $this->_collection->find($this->_query, $this->_fields);
+
+        if ($this->_sort_fields !== NULL)
+        {
+            $cursor->sort($this->_sort_fields);
+        }
+
+        if ($this->_limit !== NULL)
+        {
+            $cursor->limit($this->_limit);
+        }
+
+        if (isset($benchmark))
+        {
+            Profiler::stop($benchmark);
+        }
+
+        return $cursor;
     }
 
     public function current()
