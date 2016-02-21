@@ -125,7 +125,7 @@ class Kohana_Session_Mongo extends Session {
                         );
 
                         Mongo_DB::update($this->_database, $this->_collection, $data)
-                                ->where('session_id', $this->_update_id)
+                                ->where(array('session_id' => $this->_update_id))
                                 ->execute();
 
 		}
@@ -162,7 +162,7 @@ class Kohana_Session_Mongo extends Session {
 		try
 		{
                     Mongo_DB::delete($this->_database, $this->_collection)
-                        ->where('session_id', $this->_update_id)
+                        ->where(array('session_id' => $this->_update_id))
                         ->execute();
 
 		    // Delete the old session id
@@ -196,7 +196,7 @@ class Kohana_Session_Mongo extends Session {
 		// Delete all sessions that have expired
                 $diff = time() - $expires;
                 Mongo_DB::delete($this->_database, $this->_collection)
-                        ->where('last_active', array('$lt' => $diff))
+                        ->where(array('last_active' => array('$lt' => $diff)))
                         ->execute();
 	}
 
