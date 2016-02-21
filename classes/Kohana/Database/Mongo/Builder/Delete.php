@@ -20,6 +20,14 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
     {
         $this->_config();
 
+        if ($database === NULL)
+        {
+            $this->_database = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_database'];
+        } else
+        {
+            $this->_database = $database;
+        }
+
         if ($collection === NULL)
         {
             $this->_collection = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_collection'];
