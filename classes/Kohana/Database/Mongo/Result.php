@@ -88,6 +88,7 @@ class Kohana_Database_Mongo_Result
                    . serialize($this->_fields)
                    . serialize($this->_options)
                    . serialize($this->_sort_fields)
+                   . serialize($this->_skip)
                    . serialize($this->_limit);
 
         $caching = $this->_cache_life > 0;
