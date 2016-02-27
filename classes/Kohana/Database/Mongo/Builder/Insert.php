@@ -39,6 +39,12 @@ class Kohana_Database_Mongo_Builder_Insert extends Database_Mongo_Builder
         $this->_data = $data;
     }
     
+    /**
+     * Set insert options
+     * @param array
+     * @return  $this
+     */
+    
     public function options($options = NULL)
     {
         if ($options !== NULL)
@@ -48,6 +54,11 @@ class Kohana_Database_Mongo_Builder_Insert extends Database_Mongo_Builder
         return $this;
     }
 
+    /**
+     * Execute non query
+     * @return  mixed
+     */
+    
     public function execute()
     {
         if (Kohana::$profiling)
@@ -55,13 +66,14 @@ class Kohana_Database_Mongo_Builder_Insert extends Database_Mongo_Builder
             $benchmark = Profiler::start("Mongo (INSERT)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
         }
         
-        $this->_selected_collection->insert($this->_data, $this->_options);
+        $result = $this->_selected_collection->insert($this->_data, $this->_options);
 
         if (isset($benchmark))
         {
             Profiler::stop($benchmark);
         }
-        
+
+        return $result;
     }
     
 }

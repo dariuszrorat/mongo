@@ -39,11 +39,22 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
         $this->_selected_collection = $this->_client->selectCollection($this->_database, $this->_collection);        
     }
     
+    /**
+     * Set only just one delete record
+     * @return  $this
+     */
+    
     public function just_one()
     {
         $this->_options['justOne'] = TRUE;
         return $this;
     }
+
+    /**
+     * Set delete options
+     * @param array
+     * @return  $this
+     */
     
     public function options($options = NULL)
     {
@@ -54,12 +65,23 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
         return $this;
     }    
     
+    /**
+     * Filter where query = array('key' => 'value')
+     * @param   array
+     * @return  $this
+     */
+    
     public function where($query)
     {
         $this->_where = $query;
         return $this;
     }
 
+    /**
+     * Execute non query
+     * @return  mixed
+     */
+    
     public function execute()
     {
         if (Kohana::$profiling)
@@ -67,13 +89,14 @@ class Kohana_Database_Mongo_Builder_Delete extends Database_Mongo_Builder
             $benchmark = Profiler::start("Mongo (DELETE)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
         }        
         
-        $this->_selected_collection->remove($this->_where, $this->_options);
+        $result = $this->_selected_collection->remove($this->_where, $this->_options);
         
         if (isset($benchmark))
         {
             Profiler::stop($benchmark);
         }
-        
+
+        return $result;
     }
 
 }

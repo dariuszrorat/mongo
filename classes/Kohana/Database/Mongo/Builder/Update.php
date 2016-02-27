@@ -41,12 +41,23 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
         $this->_data = $data;
     }
 
+    /**
+     * Set multiple update records
+     * @return  $this
+     */
+    
     public function multiple()
     {
         $this->_options['multiple'] = TRUE;
         return $this;
     }
 
+    /**
+     * Set update options
+     * @param array
+     * @return  $this
+     */
+    
     public function options($options = NULL)
     {
         if ($options !== NULL)
@@ -56,12 +67,23 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
         return $this;
     }
     
+    /**
+     * Filter where query = array('key' => 'value')
+     * @param   array
+     * @return  $this
+     */
+    
     public function where($query)
     {
         $this->_where = $query;
         return $this;
     }
 
+    /**
+     * Execute non query
+     * @return  mixed
+     */
+    
     public function execute()
     {
         if (Kohana::$profiling)
@@ -69,7 +91,7 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
             $benchmark = Profiler::start("Mongo (UPDATE)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
         }        
 
-        $this->_selected_collection->update(
+        $result = $this->_selected_collection->update(
                 $this->_where, array('$set' => $this->_data), $this->_options
         );
         
@@ -77,7 +99,8 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
         {
             Profiler::stop($benchmark);
         }
-        
+
+        return $result;
     }
 
 }

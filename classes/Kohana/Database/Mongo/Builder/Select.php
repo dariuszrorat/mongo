@@ -19,6 +19,7 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
     protected $_from = NULL;
     protected $_cache_life = 0;
     protected $_sort_fields = NULL;
+    protected $_skip = NULL;
     protected $_limit = NULL;
 
     /**
@@ -31,7 +32,7 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
     }
 
     /**
-     *
+     * Select from database and collection
      * @param   string
      * @return  $this
      */
@@ -57,12 +58,24 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         return $this;
     }
 
+    /**
+     * Filter where query = array('key' => 'value')
+     * @param   array
+     * @return  $this
+     */
+    
     public function where($query)
     {
         $this->_query = $query;
         return $this;
     }
 
+    /**
+     * Set query options
+     * @param   array
+     * @return  $this
+     */
+    
     public function options($options = NULL)
     {
         if ($options !== NULL)
@@ -71,6 +84,12 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         }
         return $this;
     }
+    
+    /**
+     * Set cache life
+     * @param   int
+     * @return  $this
+     */
     
     public function cached($lifetime = NULL)
     {
@@ -82,6 +101,12 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         $this->_cache_life = $lifetime;
         return $this;
     }
+
+    /**
+     * Sort results by fields
+     * @param   array
+     * @return  $this
+     */
     
     public function sort($fields = NULL)
     {
@@ -89,6 +114,24 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         return $this;
     }
 
+    /**
+     * Set skip to paginate results
+     * @param   int
+     * @return  $this
+     */
+    
+    public function skip($skip = NULL)
+    {
+        $this->_skip = $skip;
+        return $this;
+    }
+
+    /**
+     * Set limit to paginate results
+     * @param   int
+     * @return  $this
+     */
+    
     public function limit($limit = NULL)
     {
         $this->_limit = $limit;
@@ -106,6 +149,7 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         $result = $result
                 ->cached($this->_cache_life)
                 ->sort($this->_sort_fields)
+                ->skip($this->_skip)
                 ->limit($this->_limit);
         return $result;
                 

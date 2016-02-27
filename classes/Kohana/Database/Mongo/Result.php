@@ -17,6 +17,7 @@ class Kohana_Database_Mongo_Result
     protected $_options = array();
     protected $_cache_life = 0;
     protected $_sort_fields = NULL;
+    protected $_skip = NULL;
     protected $_limit = NULL;
 
     public function __construct($collection, $query, $fields, $options = array())
@@ -26,24 +27,59 @@ class Kohana_Database_Mongo_Result
         $this->_fields = $fields;
         $this->_options = $options;        
     }
-    
+
+    /**
+     * Set cache life
+     * @param int
+     * @return  $this
+     */
+
     public function cached($lifetime)
     {
         $this->_cache_life = $lifetime;
         return $this;
     }
-    
+
+    /**
+     * Set sort fields
+     * @param array
+     * @return  $this
+     */
+
     public function sort($fields)
     {
         $this->_sort_fields = $fields;
         return $this;
     }
-    
+
+    /**
+     * Set skip
+     * @param int
+     * @return  $this
+     */
+
+    public function skip($skip)
+    {
+        $this->_skip = $skip;
+        return $this;
+    }
+
+    /**
+     * Set limit
+     * @param int
+     * @return  $this
+     */
+
     public function limit($limit)
     {
         $this->_limit = $limit;
         return $this;
     }
+
+    /**
+     * Return results as array
+     * @return  array
+     */
 
     public function as_array()
     {
@@ -70,7 +106,12 @@ class Kohana_Database_Mongo_Result
             {
                 $cursor->sort($this->_sort_fields);
             }
-            
+
+            if ($this->_skip !== NULL)
+            {
+                $cursor->skip($this->_skip);
+            }
+
             if ($this->_limit !== NULL)
             {
                 $cursor->limit($this->_limit);
@@ -95,6 +136,11 @@ class Kohana_Database_Mongo_Result
         return $result;
     }
 
+    /**
+     * Return results as cursor
+     * @return MongoCursor
+     */
+
     public function cursor()
     {
         if (Kohana::$profiling)
@@ -109,6 +155,11 @@ class Kohana_Database_Mongo_Result
             $cursor->sort($this->_sort_fields);
         }
 
+        if ($this->_skip !== NULL)
+        {
+            $cursor->skip($this->_skip);
+        }
+
         if ($this->_limit !== NULL)
         {
             $cursor->limit($this->_limit);
@@ -121,6 +172,11 @@ class Kohana_Database_Mongo_Result
 
         return $cursor;
     }
+
+    /**
+     * Return current result
+     * @return  array
+     */
 
     public function current()
     {
@@ -151,6 +207,11 @@ class Kohana_Database_Mongo_Result
 
         return $result;
     }
+
+    /**
+     * Return count of results
+     * @return  int
+     */
 
     public function count()
     {
