@@ -24,6 +24,7 @@ Windows
 ```php
         $result = Mongo_DB::select()
                 ->from('mydb', 'mycol')
+                ->just_one()
                 ->execute()
                 ->current();
 

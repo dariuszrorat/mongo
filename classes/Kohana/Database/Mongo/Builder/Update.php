@@ -1,13 +1,13 @@
 <?php
 
 defined('SYSPATH') OR die('No direct script access.');
+
 /**
  * @package    Kohana/Mongo
  * @author     Dariusz Rorat
  * @copyright  (c) 2016 Dariusz Rorat
  * @license    BSD
  */
-
 class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
 {
 
@@ -28,7 +28,7 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
         {
             $this->_database = $database;
         }
-        
+
         if ($collection === NULL)
         {
             $this->_collection = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['default_collection'];
@@ -37,7 +37,6 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
             $this->_collection = $collection;
         }
 
-        $this->_selected_collection = $this->_client->selectCollection($this->_database, $this->_collection);
         $this->_data = $data;
     }
 
@@ -45,7 +44,6 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
      * Set multiple update records
      * @return  $this
      */
-    
     public function multiple()
     {
         $this->_options['multiple'] = TRUE;
@@ -57,7 +55,6 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
      * @param array
      * @return  $this
      */
-    
     public function options($options = NULL)
     {
         if ($options !== NULL)
@@ -66,13 +63,12 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
         }
         return $this;
     }
-    
+
     /**
      * Filter where query = array('key' => 'value')
      * @param   array
      * @return  $this
      */
-    
     public function where($query)
     {
         $this->_where = $query;
@@ -82,25 +78,34 @@ class Kohana_Database_Mongo_Builder_Update extends Database_Mongo_Builder
     /**
      * Execute non query
      * @return  mixed
+     * @throws Database_Mongo_Exception
      */
-    
     public function execute()
     {
-        if (Kohana::$profiling)
+        try
         {
-            $benchmark = Profiler::start("Mongo (UPDATE)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
-        }        
+            $this->_setup_connection();
+            $this->_selected_collection = $this->_client->selectCollection($this->_database, $this->_collection);
 
-        $result = $this->_selected_collection->update(
-                $this->_where, array('$set' => $this->_data), $this->_options
-        );
-        
-        if (isset($benchmark))
+            if (Kohana::$profiling)
+            {
+                $benchmark = Profiler::start("Mongo (UPDATE)", 'DB: ' . $this->_database . ', COL: ' . $this->_collection);
+            }
+
+            $result = $this->_selected_collection->update(
+                    $this->_where, array('$set' => $this->_data), $this->_options
+            );
+
+            if (isset($benchmark))
+            {
+                Profiler::stop($benchmark);
+            }
+
+            return $result;
+        } catch (MongoConnectionException $e)
         {
-            Profiler::stop($benchmark);
+            throw new Database_Mongo_Exception(':error', array(':error' => $e->getMessage()), $e->getCode());
         }
-
-        return $result;
     }
 
 }

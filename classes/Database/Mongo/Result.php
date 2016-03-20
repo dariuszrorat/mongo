@@ -1,3 +1,3 @@
 <?php defined('SYSPATH') OR die('No direct script access.');
 
-class Database_Mongo_Result extends Kohana_Database_Mongo_Result {}
+abstract class Database_Mongo_Result extends Kohana_Database_Mongo_Result {}

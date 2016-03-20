@@ -19,10 +19,12 @@ abstract class Kohana_Database_Mongo_Builder {
     {
         $this->_host = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['host'];
         $this->_port = Kohana::$config->load('mongo')->get(Mongo_DB::$default)['port'];
-
-        $dsn = 'mongodb://' . $this->_host . ':' . $this->_port;
-        $this->_client = new MongoClient($dsn);
     }
-        
+     
+    protected function _setup_connection()
+    {
+        $dsn = 'mongodb://' . $this->_host . ':' . $this->_port;
+        $this->_client = new MongoClient($dsn);                        
+    }
 
 }

@@ -17,7 +17,9 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
     protected $_fields = array();
     protected $_options = array();
     protected $_from = NULL;
-    protected $_cache_life = 0;
+    protected $_just_one = FALSE;
+    protected $_lifetime = NULL;
+    protected $_force_execute = FALSE;
     protected $_sort_fields = NULL;
     protected $_skip = NULL;
     protected $_limit = NULL;
@@ -54,7 +56,6 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
             $this->_collection = $collection;
         }
 
-        $this->_from = $this->_client->selectCollection($this->_database, $this->_collection);
         return $this;
     }
 
@@ -63,7 +64,6 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @param   array
      * @return  $this
      */
-    
     public function where($query)
     {
         $this->_query = $query;
@@ -75,7 +75,6 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @param   array
      * @return  $this
      */
-    
     public function options($options = NULL)
     {
         if ($options !== NULL)
@@ -84,21 +83,31 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
         }
         return $this;
     }
-    
+
+    /**
+     * Set fust one record to fetch
+     * @return  $this
+     */
+    public function just_one()
+    {
+        $this->_just_one = TRUE;
+        return $this;
+    }
+
     /**
      * Set cache life
      * @param   int
      * @return  $this
      */
-    
-    public function cached($lifetime = NULL)
+    public function cached($lifetime = NULL, $force = FALSE)
     {
         if ($lifetime === NULL)
         {
             $lifetime = Kohana::$cache_life;
         }
 
-        $this->_cache_life = $lifetime;
+        $this->_lifetime = $lifetime;
+        $this->_force_execute = $force;
         return $this;
     }
 
@@ -107,7 +116,6 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @param   array
      * @return  $this
      */
-    
     public function sort($fields = NULL)
     {
         $this->_sort_fields = $fields;
@@ -119,7 +127,6 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @param   int
      * @return  $this
      */
-    
     public function skip($skip = NULL)
     {
         $this->_skip = $skip;
@@ -131,7 +138,6 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @param   int
      * @return  $this
      */
-    
     public function limit($limit = NULL)
     {
         $this->_limit = $limit;
@@ -143,18 +149,129 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
      * @return  Darabase_Mongo_Result
      */
     public function execute()
-    {        
-        $result = new Database_Mongo_Result($this->_from, $this->_query, 
-                $this->_fields, $this->_options);
-        $result = $result
-                ->cached($this->_cache_life)
-                ->sort($this->_sort_fields)
-                ->skip($this->_skip)
-                ->limit($this->_limit);
+    {
+        if ($this->_lifetime !== NULL)
+        {
+            $cache_key = $this->_collection . 'SELECT'
+                    . serialize($this->_query)
+                    . serialize($this->_fields)
+                    . serialize($this->_options)
+                    . serialize($this->_sort_fields)
+                    . serialize($this->_skip)
+                    . serialize($this->_just_one)
+                    . serialize($this->_limit);
+
+            // Read the cache first to delete a possible hit with lifetime <= 0
+            if (($result = Kohana::cache($cache_key, NULL, $this->_lifetime)) !== NULL
+                    AND ! $this->_force_execute)
+            {
+                // Return a cached result
+                return new Database_Mongo_Result_Cached($result);
+            }
+        }
+
+        // Execute the query
+        if ($this->_just_one)
+        {
+            $result = $this->_fetch_one();
+        } else
+        {
+            $result = $this->_fetch_all();
+        }
+
+        if (isset($cache_key) AND $this->_lifetime > 0)
+        {
+            // Cache the result array
+            Kohana::cache($cache_key, $result->as_array(), $this->_lifetime);
+        }
+
+
         return $result;
-                
     }
-        
+
+    /**
+     * Fetch one document
+     * @return  Database_Mongo_Result_Cached
+     * @throws Database_Mongo_Exception
+     */
+    
+    protected function _fetch_one()
+    {
+        try
+        {
+            $this->_setup_connection();
+            $this->_from = $this->_client->selectCollection($this->_database, $this->_collection);
+
+            if (Kohana::$profiling)
+            {
+                $benchmark = Profiler::start("Mongo (SELECT ONE)", 'COLLECTION: ' . $this->_collection);
+            }
+
+            $result = array();
+            $result[] = $this->_from->findOne($this->_query, $this->_fields);
+
+            if (isset($benchmark))
+            {
+                Profiler::stop($benchmark);
+            }
+            return new Database_Mongo_Result_Cached($result);
+        } catch (MongoConnectionException $e)
+        {
+            throw new Database_Mongo_Exception(':error', array(':error' => $e->getMessage()), $e->getCode());
+        }
+    }
+
+    /**
+     * Fetch all documents
+     * @return  Database_Mongo_Result_Cached
+     * @throws Database_Mongo_Exception
+     */
+    
+    protected function _fetch_all()
+    {
+        try
+        {
+            $this->_setup_connection();
+            $this->_from = $this->_client->selectCollection($this->_database, $this->_collection);
+
+            if (Kohana::$profiling)
+            {
+                $benchmark = Profiler::start("Mongo (SELECT ALL)", 'COLLECTION: ' . $this->_collection);
+            }
+
+            $cursor = $this->_from->find($this->_query, $this->_fields);
+
+            if ($this->_sort_fields !== NULL)
+            {
+                $cursor->sort($this->_sort_fields);
+            }
+
+            if ($this->_skip !== NULL)
+            {
+                $cursor->skip($this->_skip);
+            }
+
+            if ($this->_limit !== NULL)
+            {
+                $cursor->limit($this->_limit);
+            }
+
+            $result = array();
+            foreach ($cursor as $document)
+            {
+                $result[] = $document;
+            }
+
+            if (isset($benchmark))
+            {
+                Profiler::stop($benchmark);
+            }
+            return new Database_Mongo_Result_Cached($result);
+        } catch (MongoConnectionException $e)
+        {
+            throw new Database_Mongo_Exception(':error', array(':error' => $e->getMessage()), $e->getCode());
+        }
+    }
 
 }
 

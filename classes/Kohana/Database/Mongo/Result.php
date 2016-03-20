@@ -8,240 +8,251 @@ defined('SYSPATH') OR die('No direct script access.');
  * @copyright  (c) 2016 Dariusz Rorat
  * @license    BSD
  */
-class Kohana_Database_Mongo_Result
+abstract class Kohana_Database_Mongo_Result implements Countable, Iterator, SeekableIterator, ArrayAccess
 {
 
-    protected $_collection = NULL;
-    protected $_query;
-    protected $_fields;
-    protected $_options = array();
-    protected $_cache_life = 0;
-    protected $_sort_fields = NULL;
-    protected $_skip = NULL;
-    protected $_limit = NULL;
-
-    public function __construct($collection, $query, $fields, $options = array())
-    {
-        $this->_collection = $collection;
-        $this->_query = $query;
-        $this->_fields = $fields;
-        $this->_options = $options;        
-    }
+    // Raw result resource
+    protected $_result;
+    // Total number of documents and current document
+    protected $_total_documents = 0;
+    protected $_current_document = 0;
 
     /**
-     * Set cache life
-     * @param int
-     * @return  $this
+     * Sets the total number of documents and stores the result locally.
+     *
+     * @param   mixed   $result     query result
+     * @return  void
      */
-
-    public function cached($lifetime)
+    public function __construct($result)
     {
-        $this->_cache_life = $lifetime;
-        return $this;
+        $this->_result = $result;
     }
 
     /**
-     * Set sort fields
-     * @param array
-     * @return  $this
+     * Result destruction cleans up all open result sets.
+     *
+     * @return  void
      */
-
-    public function sort($fields)
-    {
-        $this->_sort_fields = $fields;
-        return $this;
-    }
+    abstract public function __destruct();
 
     /**
-     * Set skip
-     * @param int
-     * @return  $this
+     * Get a cached database result from the current result iterator.
+     *
+     *     $cachable = serialize($result->cached());
+     *
+     * @return  Database_Result_Cached
+     * @since   3.0.5
      */
-
-    public function skip($skip)
+    public function cached()
     {
-        $this->_skip = $skip;
-        return $this;
+        return new Database_Mongo_Result_Cached($this->as_array());
     }
 
     /**
-     * Set limit
-     * @param int
-     * @return  $this
-     */
-
-    public function limit($limit)
-    {
-        $this->_limit = $limit;
-        return $this;
-    }
-
-    /**
-     * Return results as array
+     * Return all of the documents in the result as an array.
+     *
+     *     // Indexed array of all documents
+     *     $documents = $result->as_array();
+     *
+     *     // Associative array of documents by "id"
+     *     $documents = $result->as_array('id');
+     *
+     *     // Associative array of documents, "id" => "name"
+     *     $documents = $result->as_array('id', 'name');
+     *
+     * @param   string  $key    column for associative keys
+     * @param   string  $value  column for values
      * @return  array
      */
-
-    public function as_array()
+    public function as_array($key = NULL, $value = NULL)
     {
-        $cache_key = $this->_collection . 'ALL'
-                   . serialize($this->_query)
-                   . serialize($this->_fields)
-                   . serialize($this->_options)
-                   . serialize($this->_sort_fields)
-                   . serialize($this->_skip)
-                   . serialize($this->_limit);
+        $results = array();
 
-        $caching = $this->_cache_life > 0;
-        $result = $caching ? Kohana::cache($cache_key) : NULL;
-
-        if ($result === NULL)
+        if ($key === NULL AND $value === NULL)
         {
-            if (Kohana::$profiling)
+            foreach ($this as $document)
             {
-                $benchmark = Profiler::start("Mongo (SELECT ALL)", 'COLLECTION: ' . $this->_collection);
+                $results[] = $document;
             }
-
-            $cursor = $this->_collection->find($this->_query, $this->_fields);
-
-            if ($this->_sort_fields !== NULL)
+        } elseif ($key === NULL)
+        {
+            foreach ($this as $document)
             {
-                $cursor->sort($this->_sort_fields);
+                $results[] = $document[$value];
             }
-
-            if ($this->_skip !== NULL)
+        } elseif ($value === NULL)
+        {
+            foreach ($this as $document)
             {
-                $cursor->skip($this->_skip);
+                $results[$document[$key]] = $document;
             }
-
-            if ($this->_limit !== NULL)
+        } else
+        {
+            foreach ($this as $document)
             {
-                $cursor->limit($this->_limit);
-            }
-            
-            $result = array();
-            foreach ($cursor as $document)
-            {
-                $result[] = $document;
-            }
-
-            if (isset($benchmark))
-            {
-                Profiler::stop($benchmark);
-            }
-
-            if ($caching)
-            {                
-                Kohana::cache($cache_key, $result, $this->_cache_life);
+                $results[$document[$key]] = $document[$value];
             }
         }
-        return $result;
+
+        $this->rewind();
+
+        return $results;
     }
 
     /**
-     * Return results as cursor
-     * @return MongoCursor
+     * Return the named column from the current document.
+     *
+     *     // Get the "id" value
+     *     $id = $result->get('id');
+     *
+     * @param   string  $name     column to get
+     * @param   mixed   $default  default value if the column does not exist
+     * @return  mixed
      */
-
-    public function cursor()
+    public function get($name, $default = NULL)
     {
-        if (Kohana::$profiling)
-        {
-            $benchmark = Profiler::start("Mongo (CURSOR)", 'COLLECTION: ' . $this->_collection);
-        }
+        $document = $this->current();
 
-        $cursor = $this->_collection->find($this->_query, $this->_fields);
+        if (isset($document[$name]))
+            return $document[$name];
 
-        if ($this->_sort_fields !== NULL)
-        {
-            $cursor->sort($this->_sort_fields);
-        }
-
-        if ($this->_skip !== NULL)
-        {
-            $cursor->skip($this->_skip);
-        }
-
-        if ($this->_limit !== NULL)
-        {
-            $cursor->limit($this->_limit);
-        }
-
-        if (isset($benchmark))
-        {
-            Profiler::stop($benchmark);
-        }
-
-        return $cursor;
+        return $default;
     }
 
     /**
-     * Return current result
-     * @return  array
+     * Implements [Countable::count], returns the total number of documents.
+     *
+     *     echo count($result);
+     *
+     * @return  integer
      */
-
-    public function current()
-    {
-        $cache_key = $this->_collection . 'CURRENT' . serialize($this->_query)
-                . serialize($this->_fields) . serialize($this->_options);
-
-        $caching = $this->_cache_life > 0;
-        $result = $caching ? Kohana::cache($cache_key) : NULL;
-        
-        if ($result === NULL)
-        {
-            if (Kohana::$profiling)
-            {
-                $benchmark = Profiler::start("Mongo (SELECT ONE)", 'COLLECTION: ' . $this->_collection);
-            }
-
-            $result = $this->_collection->findOne($this->_query, $this->_fields, $this->_options);
-
-            if (isset($benchmark))
-            {
-                Profiler::stop($benchmark);
-            }
-            if ($caching)
-            {
-                Kohana::cache($cache_key, $result, $this->_cache_life);
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * Return count of results
-     * @return  int
-     */
-
     public function count()
     {
-        $cache_key = $this->_collection . 'COUNT' . serialize($this->_query)
-                . serialize($this->_options);
+        return $this->_total_documents;
+    }
 
-        $caching = $this->_cache_life > 0;
-        $result = $caching ? Kohana::cache($cache_key) : NULL;
-        
-        if ($result === NULL)
-        {
-            if (Kohana::$profiling)
-            {
-                $benchmark = Profiler::start("Mongo (COUNT)", 'COLLECTION: ' . $this->_collection);
-            }
+    /**
+     * Implements [ArrayAccess::offsetExists], determines if document exists.
+     *
+     *     if (isset($result[10]))
+     *     {
+     *         // document 10 exists
+     *     }
+     *
+     * @param   int     $offset
+     * @return  boolean
+     */
+    public function offsetExists($offset)
+    {
+        return ($offset >= 0 AND $offset < $this->_total_documents);
+    }
 
-            $result = $this->_collection->count($this->_query, $this->_options);
+    /**
+     * Implements [ArrayAccess::offsetGet], gets a given document.
+     *
+     *     $document = $result[10];
+     *
+     * @param   int     $offset
+     * @return  mixed
+     */
+    public function offsetGet($offset)
+    {
+        if (!$this->seek($offset))
+            return NULL;
 
-            if (isset($benchmark))
-            {
-                Profiler::stop($benchmark);
-            }
-            if ($caching)
-            {
-                Kohana::cache($cache_key, $result, $this->_cache_life);
-            }
-        }
+        return $this->current();
+    }
 
-        return $result;
+    /**
+     * Implements [ArrayAccess::offsetSet], throws an error.
+     *
+     * [!!] You cannot modify a MongoDB result.
+     *
+     * @param   int     $offset
+     * @param   mixed   $value
+     * @return  void
+     * @throws  Kohana_Exception
+     */
+    final public function offsetSet($offset, $value)
+    {
+        throw new Kohana_Exception('Mongo results are read-only');
+    }
+
+    /**
+     * Implements [ArrayAccess::offsetUnset], throws an error.
+     *
+     * [!!] You cannot modify a database result.
+     *
+     * @param   int     $offset
+     * @return  void
+     * @throws  Kohana_Exception
+     */
+    final public function offsetUnset($offset)
+    {
+        throw new Kohana_Exception('Mongo results are read-only');
+    }
+
+    /**
+     * Implements [Iterator::key], returns the current document number.
+     *
+     *     echo key($result);
+     *
+     * @return  integer
+     */
+    public function key()
+    {
+        return $this->_current_document;
+    }
+
+    /**
+     * Implements [Iterator::next], moves to the next document.
+     *
+     *     next($result);
+     *
+     * @return  $this
+     */
+    public function next()
+    {
+        ++$this->_current_document;
+        return $this;
+    }
+
+    /**
+     * Implements [Iterator::prev], moves to the previous document.
+     *
+     *     prev($result);
+     *
+     * @return  $this
+     */
+    public function prev()
+    {
+        --$this->_current_document;
+        return $this;
+    }
+
+    /**
+     * Implements [Iterator::rewind], sets the current document to zero.
+     *
+     *     rewind($result);
+     *
+     * @return  $this
+     */
+    public function rewind()
+    {
+        $this->_current_document = 0;
+        return $this;
+    }
+
+    /**
+     * Implements [Iterator::valid], checks if the current document exists.
+     *
+     * [!!] This method is only used internally.
+     *
+     * @return  boolean
+     */
+    public function valid()
+    {
+        return $this->offsetExists($this->_current_document);
     }
 
 }
