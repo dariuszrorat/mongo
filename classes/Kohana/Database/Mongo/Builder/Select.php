@@ -152,7 +152,9 @@ class Kohana_Database_Mongo_Builder_Select extends Database_Mongo_Builder
     {
         if ($this->_lifetime !== NULL)
         {
-            $cache_key = $this->_collection . 'SELECT'
+            $cache_key = 'SELECT:'
+                    . $this->_database
+                    . $this->_collection
                     . serialize($this->_query)
                     . serialize($this->_fields)
                     . serialize($this->_options)
